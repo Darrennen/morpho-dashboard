@@ -83,21 +83,86 @@ export default function PositionCard({ pos, warnThreshold, dangerThreshold }: Pr
         )}
       </div>
 
-      {/* APY row */}
-      <div className="flex gap-4 text-sm">
-        {pos.borrowedUsd > 0 && (
-          <div>
-            <span className="text-gray-500">Borrow APY </span>
-            <span className="text-red-400 font-semibold">{pos.borrowApy.toFixed(2)}%</span>
+      {/* Borrow cost */}
+      {pos.borrowedUsd > 0 && (
+        <div className="bg-red-950/30 border border-red-900/40 rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">Borrow Cost</span>
+            <span className="text-red-400 font-bold">{pos.borrowApy.toFixed(2)}% APY</span>
           </div>
-        )}
-        {pos.suppliedUsd > 0 && (
-          <div>
-            <span className="text-gray-500">Supply APY </span>
-            <span className="text-emerald-400 font-semibold">{pos.supplyApy.toFixed(2)}%</span>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="text-xs text-gray-500">Daily</div>
+              <div className="text-white font-semibold text-sm">{usd(pos.dailyBorrowCostUsd)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500">Monthly</div>
+              <div className="text-white font-semibold text-sm">{usd(pos.monthlyBorrowCostUsd)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500">Annual</div>
+              <div className="text-white font-semibold text-sm">{usd(pos.annualBorrowCostUsd)}</div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Supply APY */}
+      {pos.suppliedUsd > 0 && (
+        <div className="flex gap-1 text-sm">
+          <span className="text-gray-500">Supply APY</span>
+          <span className="text-emerald-400 font-semibold">{pos.supplyApy.toFixed(2)}%</span>
+        </div>
+      )}
+
+      {/* Liquidation risk */}
+      {pos.liquidationPriceUsd !== null && (
+        <div className="bg-yellow-950/30 border border-yellow-900/40 rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-yellow-400 uppercase tracking-wider">Liquidation Risk</span>
+            {pos.dropToLiquidationPct !== null && (
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                pos.dropToLiquidationPct < 10
+                  ? "bg-red-900/50 text-red-400 border border-red-700"
+                  : pos.dropToLiquidationPct < 20
+                  ? "bg-yellow-900/50 text-yellow-400 border border-yellow-700"
+                  : "bg-emerald-900/50 text-emerald-400 border border-emerald-700"
+              }`}>
+                {pos.dropToLiquidationPct.toFixed(1)}% buffer
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-gray-500 mb-0.5">Current price</div>
+              <div className="text-white font-semibold">{usd(pos.collateralPriceUsd)}</div>
+              <div className="text-xs text-gray-500">{pos.collateralSymbol}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-0.5">Liquidation price</div>
+              <div className="text-yellow-300 font-semibold">{usd(pos.liquidationPriceUsd)}</div>
+              <div className="text-xs text-gray-500">triggers at this price</div>
+            </div>
+          </div>
+          {/* Drop buffer bar */}
+          {pos.dropToLiquidationPct !== null && (
+            <div>
+              <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    pos.dropToLiquidationPct < 10 ? "bg-red-500" :
+                    pos.dropToLiquidationPct < 20 ? "bg-yellow-400" : "bg-emerald-400"
+                  }`}
+                  style={{ width: `${Math.min(pos.dropToLiquidationPct, 100)}%` }}
+                />
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Price can drop {pos.dropToLiquidationPct.toFixed(1)}% before liquidation
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Health factor */}
       {pos.borrowedUsd > 0 && (
