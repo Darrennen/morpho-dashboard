@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PositionCard from "@/components/PositionCard";
 import Settings, { AppSettings, DEFAULT_SETTINGS } from "@/components/Settings";
+import MonitorStatus from "@/components/MonitorStatus";
 import { parsePosition, type MorphoPosition, type ParsedPosition } from "@/lib/morpho";
 
 const LS_ADDRESS = "morpho_address";
@@ -187,6 +188,7 @@ export default function Home() {
             <span className="text-xs text-gray-500 hidden sm:block">Ethereum Mainnet</span>
           </div>
           <div className="flex items-center gap-3">
+            <MonitorStatus />
             {lastUpdated && (
               <span className="text-xs text-gray-500 hidden sm:block">
                 Updated {lastUpdated.toLocaleTimeString()}
