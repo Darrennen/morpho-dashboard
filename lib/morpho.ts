@@ -43,9 +43,12 @@ export function parsePosition(pos: MorphoPosition): ParsedPosition {
   const borrowedAmount = Number(pos.borrowAssets) / 10 ** loanDecimals;
   const suppliedAmount = Number(pos.supplyAssets) / 10 ** loanDecimals;
 
+  const borrowedUsd = pos.borrowAssetsUsd ?? 0;
+  const collateralUsd = pos.collateralUsd ?? 0;
+
   const ltv =
-    pos.collateralUsd > 0 && pos.borrowedUsd > 0
-      ? (pos.borrowedUsd / pos.collateralUsd) * 100
+    collateralUsd > 0 && borrowedUsd > 0
+      ? (borrowedUsd / collateralUsd) * 100
       : 0;
 
   return {
@@ -53,11 +56,11 @@ export function parsePosition(pos: MorphoPosition): ParsedPosition {
     collateralSymbol: pos.market.collateralAsset?.symbol ?? "—",
     loanSymbol: pos.market.loanAsset.symbol,
     collateralAmount,
-    collateralUsd: pos.collateralUsd,
+    collateralUsd,
     borrowedAmount,
-    borrowedUsd: pos.borrowedUsd,
+    borrowedUsd,
     suppliedAmount,
-    suppliedUsd: pos.supplyAssetsUsd,
+    suppliedUsd: pos.supplyAssetsUsd ?? 0,
     healthFactor: pos.healthFactor,
     lltv,
     ltv,
