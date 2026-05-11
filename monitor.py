@@ -25,11 +25,9 @@ if _env_file.exists():
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 
-WALLET             = os.environ["WALLET"]
-SLACK_WEBHOOK      = os.environ["SLACK_WEBHOOK"]
-HEARTBEAT_URL      = os.environ.get("HEARTBEAT_URL", "")   # e.g. https://morpho-dashboard-five.vercel.app/api/heartbeat
-HEARTBEAT_SECRET   = os.environ.get("HEARTBEAT_SECRET", "")
-CHAIN_ID           = 1          # Ethereum mainnet
+WALLET        = os.environ["WALLET"]
+SLACK_WEBHOOK = os.environ["SLACK_WEBHOOK"]
+CHAIN_ID      = 1          # Ethereum mainnet
 
 HF_WARNING      = 1.6        # health factor warning threshold
 HF_DANGER       = 1.2        # health factor danger threshold
@@ -213,69 +211,23 @@ def log_status(positions):
         liq_str = f"  liq@${p['liq_price']:.4f} ({p['drop_to_liq']:.1f}% buffer)" if p["liq_price"] else ""
         print(f"  {p['col_symbol']}/{p['loan_symbol']}  col=${p['col_usd']:,.0f}  borrow=${p['borrow_usd']:,.0f}  {hf_str}  APY={p['borrow_apy']:.2f}%{liq_str}")
 
-def send_heartbeat(positions_parsed, alerts_sent, checks_run):
-    if not HEARTBEAT_URL or not HEARTBEAT_SECRET:
-        return
-    payload = {
-        "ts": int(time.time() * 1000),
-        "checksRun": checks_run,
-        "alertsSent": alerts_sent,
-        "positions": [
-            {
-                "market": f"{p['col_symbol']}/{p['loan_symbol']}",
-                "hf": p["hf"],
-                "borrowApy": round(p["borrow_apy"], 2),
-                "collateralUsd": round(p["col_usd"], 2),
-                "borrowUsd": round(p["borrow_usd"], 2),
-            }
-            for p in positions_parsed
-            if p["col_usd"] > 0 or p["borrow_usd"] > 0
-        ],
-    }
-    try:
-        data = json.dumps(payload).encode()
-        req  = urllib.request.Request(
-            HEARTBEAT_URL, data=data,
-            headers={"Content-Type": "application/json", "x-heartbeat-secret": HEARTBEAT_SECRET},
-        )
-        with urllib.request.urlopen(req, timeout=10):
-            pass
-        print("  Heartbeat sent to dashboard.")
-    except Exception as e:
-        print(f"  Heartbeat error: {e}")
-
 def run():
     print("=" * 60)
     print("  Morpho Blue Monitor")
     print(f"  Wallet   : {WALLET[:8]}…{WALLET[-6:]}")
     print(f"  Alerts   : HF<{HF_WARNING} (warn) / HF<{HF_DANGER} (danger) / APY>{BORROW_RATE_PCT}%")
     print(f"  Interval : every {CHECK_INTERVAL_SECS}s | cooldown: {ALERT_COOLDOWN_SECS}s")
-    print(f"  Dashboard: {HEARTBEAT_URL or 'not configured'}")
     print("=" * 60)
-
-    # Startup Slack ping
-    send_slack(
-        f":white_check_mark: *Morpho Monitor started*\n"
-        f"Wallet: `{WALLET[:8]}…{WALLET[-6:]}`\n"
-        f"Checking every {CHECK_INTERVAL_SECS // 60} min · HF<{HF_WARNING} warn · HF<{HF_DANGER} danger · APY>{BORROW_RATE_PCT}%"
-    )
-
-    checks_run  = 0
-    total_alerts = 0
 
     while True:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"\n[{now}] Checking…")
         try:
             positions = fetch_positions()
-            parsed    = [parse(p) for p in positions]
             log_status(positions)
-            sent      = check_and_alert(positions)
-            checks_run  += 1
-            total_alerts += sent
+            sent = check_and_alert(positions)
             if sent == 0:
                 print("  No alerts triggered.")
-            send_heartbeat(parsed, total_alerts, checks_run)
         except Exception as e:
             print(f"  Error: {e}")
 
