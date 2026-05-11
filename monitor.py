@@ -94,7 +94,10 @@ def post_json(url, payload):
 
 def send_slack(text):
     try:
-        post_json(SLACK_WEBHOOK, {"text": text})
+        data = json.dumps({"text": text}).encode()
+        req  = urllib.request.Request(SLACK_WEBHOOK, data=data, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=10):
+            pass
         return True
     except Exception as e:
         print(f"  Slack error: {e}")
