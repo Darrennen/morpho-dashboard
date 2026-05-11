@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface AppSettings {
   slackWebhook: string;
@@ -30,6 +30,11 @@ export default function Settings({ settings, onSave, onClose }: Props) {
   const [form, setForm] = useState<AppSettings>({ ...settings });
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [serverWebhook, setServerWebhook] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/config").then(r => r.json()).then(d => setServerWebhook(d.webhookConfigured));
+  }, []);
 
   function set<K extends keyof AppSettings>(key: K, val: AppSettings[K]) {
     setForm((f) => ({ ...f, [key]: val }));
@@ -66,13 +71,21 @@ export default function Settings({ settings, onSave, onClose }: Props) {
           {/* Slack */}
           <section className="space-y-3">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Slack Alerts</h3>
+            {serverWebhook && (
+              <div className="flex items-center gap-2 bg-emerald-900/30 border border-emerald-700/50 rounded-lg px-3 py-2">
+                <span className="text-emerald-400 text-lg">✓</span>
+                <span className="text-emerald-300 text-sm font-medium">Webhook pre-configured on server</span>
+              </div>
+            )}
             <div>
-              <label className="text-sm text-gray-300 mb-1 block">Webhook URL</label>
+              <label className="text-sm text-gray-300 mb-1 block">
+                Webhook URL {serverWebhook && <span className="text-gray-500">(override optional)</span>}
+              </label>
               <input
                 type="text"
                 value={form.slackWebhook}
                 onChange={(e) => set("slackWebhook", e.target.value)}
-                placeholder="https://hooks.slack.com/services/..."
+                placeholder={serverWebhook ? "Using server webhook — leave blank to keep" : "https://hooks.slack.com/services/..."}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
               />
             </div>
