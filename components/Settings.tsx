@@ -6,6 +6,7 @@ export interface AppSettings {
   slackWebhook: string;
   hfWarning: number;
   hfDanger: number;
+  borrowRateAlert: number;
   refreshSecs: number;
   alertCooldownMins: number;
 }
@@ -18,8 +19,9 @@ interface Props {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   slackWebhook: "",
-  hfWarning: 1.5,
+  hfWarning: 1.6,
   hfDanger: 1.2,
+  borrowRateAlert: 10,
   refreshSecs: 60,
   alertCooldownMins: 60,
 };
@@ -115,8 +117,19 @@ export default function Settings({ settings, onSave, onClose }: Props) {
                 />
               </div>
             </div>
+            <div>
+              <label className="text-sm text-gray-300 mb-1 block">Borrow Rate Alert (%)</label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                value={form.borrowRateAlert}
+                onChange={(e) => set("borrowRateAlert", parseFloat(e.target.value))}
+                className="w-full bg-gray-800 border border-orange-800 rounded-lg px-3 py-2 text-sm text-orange-300 focus:outline-none focus:border-orange-500"
+              />
+            </div>
             <p className="text-xs text-gray-500">
-              Alert fires when health factor falls below these values.
+              HF alerts fire when health factor falls below threshold. Borrow rate alert fires when APY exceeds the set %.
             </p>
           </section>
 

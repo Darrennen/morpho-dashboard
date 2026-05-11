@@ -87,18 +87,39 @@ export default function Home() {
         const s = loadSettings();
         if (s.slackWebhook) {
           for (const pos of parsed) {
-            if (pos.healthFactor === null || pos.borrowedUsd === 0) continue;
+            // Health factor alerts
+            if (pos.healthFactor !== null && pos.borrowedUsd > 0) {
+              const isDanger = pos.healthFactor < s.hfDanger;
+              const isWarn = !isDanger && pos.healthFactor < s.hfWarning;
+              const level = isDanger ? "danger" : isWarn ? "warning" : null;
 
-            const isDanger = pos.healthFactor < s.hfDanger;
-            const isWarn = !isDanger && pos.healthFactor < s.hfWarning;
-            const level = isDanger ? "danger" : isWarn ? "warning" : null;
+              if (level) {
+                const alertKey = `${addr}_${pos.marketKey}_hf_${level}`;
+                if (canAlert(alertKey, s.alertCooldownMins)) {
+                  const emoji = isDanger ? ":red_circle:" : ":warning:";
+                  const msg = `${emoji} *Morpho Blue HF ${level.toUpperCase()}*\nMarket: ${pos.collateralSymbol}/${pos.loanSymbol}\nHealth Factor: *${pos.healthFactor.toFixed(3)}* (threshold: ${isDanger ? s.hfDanger : s.hfWarning})\nCollateral: $${pos.collateralUsd.toLocaleString()}\nBorrowed: $${pos.borrowedUsd.toLocaleString()}\nWallet: \`${addr.slice(0, 8)}…${addr.slice(-6)}\``;
+                  fetch("/api/slack", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ webhook: s.slackWebhook, text: msg }),
+                  }).then((r) => {
+                    if (r.ok) {
+                      setAlertTime(alertKey);
+                      setAlertLog((prev) => [
+                        `[${new Date().toLocaleTimeString()}] HF ${level.toUpperCase()} — ${pos.collateralSymbol}/${pos.loanSymbol} HF: ${pos.healthFactor?.toFixed(2)}`,
+                        ...prev.slice(0, 9),
+                      ]);
+                    }
+                  });
+                }
+              }
+            }
 
-            if (level) {
-              const alertKey = `${addr}_${pos.marketKey}_${level}`;
+            // Borrow rate alert
+            if (pos.borrowedUsd > 0 && s.borrowRateAlert > 0 && pos.borrowApy > s.borrowRateAlert) {
+              const alertKey = `${addr}_${pos.marketKey}_borrow_rate`;
               if (canAlert(alertKey, s.alertCooldownMins)) {
-                const emoji = isDanger ? ":red_circle:" : ":warning:";
-                const msg = `${emoji} *Morpho Blue ${level.toUpperCase()}*\nMarket: ${pos.collateralSymbol}/${pos.loanSymbol}\nHealth Factor: *${pos.healthFactor.toFixed(3)}*\nCollateral: $${pos.collateralUsd.toLocaleString()}\nBorrowed: $${pos.borrowedUsd.toLocaleString()}\nWallet: \`${addr.slice(0, 8)}…${addr.slice(-6)}\``;
-
+                const msg = `:chart_with_upwards_trend: *Morpho Blue HIGH BORROW RATE*\nMarket: ${pos.collateralSymbol}/${pos.loanSymbol}\nBorrow APY: *${pos.borrowApy.toFixed(2)}%* (threshold: ${s.borrowRateAlert}%)\nDaily cost: $${pos.dailyBorrowCostUsd.toFixed(2)} | Monthly: $${pos.monthlyBorrowCostUsd.toFixed(2)}\nWallet: \`${addr.slice(0, 8)}…${addr.slice(-6)}\``;
                 fetch("/api/slack", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -107,7 +128,7 @@ export default function Home() {
                   if (r.ok) {
                     setAlertTime(alertKey);
                     setAlertLog((prev) => [
-                      `[${new Date().toLocaleTimeString()}] ${level.toUpperCase()} alert sent for ${pos.collateralSymbol}/${pos.loanSymbol} (HF: ${pos.healthFactor?.toFixed(2)})`,
+                      `[${new Date().toLocaleTimeString()}] HIGH BORROW RATE — ${pos.collateralSymbol}/${pos.loanSymbol} APY: ${pos.borrowApy.toFixed(2)}%`,
                       ...prev.slice(0, 9),
                     ]);
                   }
